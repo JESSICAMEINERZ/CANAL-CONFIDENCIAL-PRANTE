@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #334155;
+  background:
+    radial-gradient(circle at top left, rgba(59, 160, 76, 0.1), transparent 29%),
+    radial-gradient(circle at 82% 2%, rgba(227, 177, 41, 0.08), transparent 20%),
+    radial-gradient(circle at 45% 14%, rgba(255, 255, 255, 0.8), transparent 22%),
+    linear-gradient(180deg, #fdfefd 0%, #f8faf8 48%, #f3f7f4 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: #334155;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.home-shell {
+  position: relative;
+  isolation: isolate;
+  background-image: url('/marca.png');
+  background-repeat: no-repeat;
+  background-position: top left;
+  background-size: clamp(25rem, 34vw, 37.5rem);
+}
+
+@media (max-width: 768px) {
+  .home-shell {
+    background-size: min(82vw, 25rem);
+  }
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+}
