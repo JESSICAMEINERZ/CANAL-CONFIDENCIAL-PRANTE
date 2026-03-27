@@ -1,6 +1,10 @@
-import { createReport, reportTypes, sendNotificationEmail } from '../services/reportService.js';
+import fs from 'fs/promises';
+import { Resend } from 'resend';
+import { createReport, reportTypes } from '../services/reportService.js';
 import { removeUploadedFiles } from '../middleware/upload.js';
 import { isValidEmail, sanitizeEmail, sanitizeLongText, sanitizeText } from '../utils/sanitize.js';
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const audioExtensionByMimeType = {
   'audio/webm': '.webm',
@@ -21,6 +25,14 @@ const resolveAttachmentExtension = (file) => {
   const mimeType = typeof file.mimetype === 'string' ? file.mimetype.split(';')[0] : '';
   return audioExtensionByMimeType[mimeType] || '';
 };
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 export const submitReport = async (request, response, next) => {
   const attachmentFiles = [...(request.files?.arquivos || []), ...(request.files?.arquivo || [])];
@@ -105,7 +117,37 @@ export const submitReport = async (request, response, next) => {
     reportCreated = true;
 
     try {
-      await sendNotificationEmail(payload);
+      if (!resend) {
+        throw new Error('O envio de e-mail não está configurado.');
+      }
+
+      const attachments = await Promise.all(
+        payload.anexos.map(async (attachment) => {
+          if (!attachment?.caminhoFisico) {
+            return null;
+          }
+
+          const content = await fs.readFile(attachment.caminhoFisico);
+
+          return {
+            filename: attachment.nome,
+            content
+          };
+        })
+      );
+
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: process.env.EMAIL_TO,
+        subject: 'Novo relato recebido',
+        html: `
+          <h2>Novo relato recebido</h2>
+          <p><strong>Tipo:</strong> ${escapeHtml(tipo)}</p>
+          <p><strong>Área:</strong> ${escapeHtml(area || 'Não informada')}</p>
+          <p><strong>Descrição:</strong> ${escapeHtml(descricao)}</p>
+        `,
+        attachments: attachments.filter(Boolean)
+      });
     } catch (error) {
       console.error('Falha ao enviar e-mail:', error.message);
     }
