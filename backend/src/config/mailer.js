@@ -1,24 +1,42 @@
-import nodemailer from 'nodemailer';
+import fs from 'fs/promises';
+import { Resend } from 'resend';
 import { env } from './env.js';
 
-const isConfigured = Boolean(env.smtpHost && env.smtpUser && env.smtpPass);
+const resend = env.resendApiKey ? new Resend(env.resendApiKey) : null;
 
-export const transporter = isConfigured
-  ? nodemailer.createTransport({
-      host: env.smtpHost,
-      port: env.smtpPort,
-      secure: env.smtpSecure,
-      auth: {
-        user: env.smtpUser,
-        pass: env.smtpPass
+const buildAttachments = async (attachments = []) => {
+  const payloads = await Promise.all(
+    attachments.map(async (attachment) => {
+      if (!attachment?.path) {
+        return null;
       }
+
+      const content = await fs.readFile(attachment.path);
+
+      return {
+        filename: attachment.filename,
+        content: content.toString('base64'),
+        contentType: attachment.contentType
+      };
     })
-  : null;
+  );
+
+  return payloads.filter(Boolean);
+};
 
 export const sendMail = async (message) => {
-  if (!transporter) {
+  if (!resend) {
     throw new Error('O envio de e-mail não está configurado.');
   }
 
-  return transporter.sendMail(message);
+  const attachments = await buildAttachments(message.attachments);
+
+  return resend.emails.send({
+    from: message.from || env.emailFrom,
+    to: message.to,
+    subject: message.subject,
+    html: message.html || '',
+    text: message.text || undefined,
+    attachments
+  });
 };

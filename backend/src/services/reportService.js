@@ -138,6 +138,14 @@ export const findReportById = async (id) =>
   );
 
 export const sendNotificationEmail = async (report) => {
+  const escapeHtml = (value) =>
+    String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
   const formattedType =
     report.tipo === 'Sugestao'
       ? 'Sugestão'
@@ -161,8 +169,21 @@ export const sendNotificationEmail = async (report) => {
   await sendMail({
     from: env.emailFrom,
     to: env.emailTo,
-    subject: `Novo relato - ${formattedType} - ${report.area || 'Sem área informada'}`,
+    subject: 'Novo relato recebido',
     text: lines.join('\n'),
+    html: `<p>Novo relato recebido</p><p><strong>Tipo:</strong> ${escapeHtml(
+      formattedType
+    )}</p><p><strong>Área:</strong> ${escapeHtml(
+      report.area || 'Não informada'
+    )}</p><p><strong>Envio anônimo:</strong> ${report.anonimo ? 'Sim' : 'Não'}</p><p><strong>Nome:</strong> ${escapeHtml(
+      report.nome || 'Não informado'
+    )}</p><p><strong>E-mail:</strong> ${escapeHtml(
+      report.email || 'Não informado'
+    )}</p><p><strong>Anexos:</strong> ${escapeHtml(
+      report.anexos.length ? report.anexos.map((attachment) => attachment.nome).join(', ') : 'Nenhum'
+    )}</p><p><strong>Descrição:</strong> ${escapeHtml(
+      report.descricao
+    )}</p><p><strong>Data do envio:</strong> ${escapeHtml(report.dataEnvio)}</p>`,
     attachments: report.anexos.map((attachment) => ({
       filename: attachment.nome,
       path: attachment.caminhoFisico,
