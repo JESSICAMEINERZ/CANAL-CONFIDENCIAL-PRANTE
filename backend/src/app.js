@@ -14,12 +14,29 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 
-app.use(
-  cors({
-    origin: env.frontendUrl,
-    credentials: false
-  })
-);
+const vercelFrontendUrl = 'https://canal-confidencial-prante-frontend.vercel.app';
+const configuredOrigins = (env.frontendUrl || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+const allowedOrigins = Array.from(new Set([...configuredOrigins, vercelFrontendUrl]));
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Origem não permitida pelo CORS.'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
